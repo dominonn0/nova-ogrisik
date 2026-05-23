@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nova Social — облачный мессенджер</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto; }
+        body { background: var(--bg, #f5f0eb); color: var(--text, #2c2825); height: 100vh; overflow: hidden; }
+        body.dark { --bg: #1e1b19; --text: #f0e7df; --accent: #ff8c42; --sidebar: #2c2722; --own: #bd6d30; --other: #5b4f46; }
+        body.blue { --bg: #1e2a3a; --text: #e0e9f0; --accent: #ff8c42; --sidebar: #1b2633; --own: #3a6080; --other: #2b3b4f; }
+        #app { height: 100%; }
+        .auth-screen { display: flex; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, #fde9db, #fadbc8); }
+        .auth-card { background: rgba(255,250,245,0.95); backdrop-filter: blur(12px); border-radius: 48px; padding: 40px; width: 420px; max-width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+        .auth-tabs { display: flex; gap: 20px; margin-bottom: 30px; border-bottom: 2px solid #ffd2b0; }
+        .auth-tab { font-size: 24px; font-weight: 600; color: #b6987f; cursor: pointer; padding-bottom: 8px; border-bottom: 3px solid transparent; }
+        .auth-tab.active { color: #ff8c42; border-bottom-color: #ff8c42; }
+        .auth-input { width: 100%; padding: 14px 20px; margin: 12px 0; border: 1px solid #ffd9be; border-radius: 100px; font-size: 16px; background: white; }
+        .auth-btn { width: 100%; padding: 14px; border: none; border-radius: 100px; font-size: 18px; font-weight: 600; background: #ff8c42; color: white; cursor: pointer; margin-top: 20px; }
+        .main-app { display: flex; height: 100%; }
+        .sidebar { width: 360px; background: var(--sidebar, #ffffffd9); backdrop-filter: blur(10px); border-right: 1px solid #f0daca; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 20px; display: flex; gap: 12px; align-items: center; }
+        .avatar { width: 54px; height: 54px; border-radius: 50%; background: #ffb27a; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 600; cursor: pointer; overflow: hidden; }
+        .icon-btn { background: none; border: none; font-size: 24px; color: #ff8c42; cursor: pointer; width: 44px; }
+        .tabs { display: flex; padding: 10px 20px; gap: 20px; border-bottom: 1px solid #f0daca; }
+        .tab { font-size: 16px; font-weight: 600; color: #b6987f; cursor: pointer; padding-bottom: 8px; border-bottom: 3px solid transparent; }
+        .tab.active { color: #ff8c42; border-bottom-color: #ff8c42; }
+        .chats-list { flex: 1; overflow-y: auto; padding: 12px; }
+        .chat-item { display: flex; align-items: center; gap: 14px; padding: 12px; border-radius: 20px; cursor: pointer; margin-bottom: 4px; }
+        .chat-item:hover { background: #ffede1; }
+        .chat-item.active { background: #ffe0cd; }
+        .chat-avatar { width: 56px; height: 56px; border-radius: 50%; background: #ffb27a; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+        .chat-info { flex: 1; }
+        .chat-name { font-weight: 600; font-size: 17px; }
+        .chat-lastmsg { font-size: 14px; color: #b6987f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .unread { background: #ff8c42; color: white; border-radius: 20px; padding: 2px 8px; font-size: 13px; }
+        .messages-panel { flex: 1; display: flex; flex-direction: column; background: var(--bg); }
+        .messages-header { padding: 16px 24px; background: rgba(255,250,245,0.8); backdrop-filter: blur(10px); border-bottom: 1px solid #f0daca; display: flex; align-items: center; gap: 16px; }
+        .back-btn { font-size: 24px; color: #ff8c42; cursor: pointer; }
+        .messages-area { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .message { max-width: 70%; display: flex; flex-direction: column; }
+        .message.own { align-self: flex-end; }
+        .bubble { padding: 10px 16px; border-radius: 20px; background: var(--other, #ffeede); word-wrap: break-word; }
+        .message.own .bubble { background: var(--own, #ffb77c); }
+        .meta { font-size: 11px; color: #b6987f; margin-top: 4px; padding: 0 8px; cursor: pointer; }
+        .reactions { display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap; }
+        .reaction { background: rgba(0,0,0,0.05); border-radius: 20px; padding: 2px 8px; font-size: 13px; cursor: pointer; }
+        .input-area { padding: 16px 24px; background: rgba(255,250,245,0.8); border-top: 1px solid #f0daca; }
+        .input-row { display: flex; gap: 10px; align-items: center; }
+        .input-row input { flex: 1; padding: 14px 20px; border: 1px solid #ffd9be; border-radius: 40px; font-size: 16px; background: white; outline: none; }
+        .send-btn { width: 48px; height: 48px; border-radius: 50%; border: none; background: #ff8c42; color: white; font-size: 20px; cursor: pointer; }
+        .fab { margin: 16px; background: #ff8c42; border: none; border-radius: 60px; padding: 12px; color: white; font-weight: bold; cursor: pointer; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal-card { background: white; border-radius: 40px; width: 500px; max-width: 90%; padding: 32px; }
+        .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 1100; }
+        .toast { background: #333; color: white; padding: 10px 18px; border-radius: 30px; margin-top: 8px; animation: fadeIn 0.2s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast-container" id="toastContainer"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ========== КОНФИГУРАЦИЯ SUPABASE (ЗАМЕНИТЕ) ==========
+const SUPABASE_URL = "https://uucatpgvxhoflpyrkxni.supabase.co/rest/v1/";
+const SUPABASE_ANON_KEY = "sb_publishable_VBGVIYoDB9zlHREeGHH-PA_ABm7oUYt";
+// =====================================================
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentUser = null;
+let profiles = [];
+let chats = [];
+let groups = [];
+let channels = [];
+let messages = [];
+let friendRequests = [];
+let stories = [];
+let activeTab = 'chats';
+let activeChatId = null;
+let activeGroupId = null;
+let activeChannelId = null;
+let subscriptions = [];
+
+function showToast(msg, type = 'info') {
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.innerText = msg;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+}
+
+function formatTime(ts) { return new Date(ts).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }); }
+
+async function loadProfiles() { const { data } = await supabase.from('profiles').select('*'); profiles = data || []; }
+async function loadUserChats() { if(!currentUser) return; const { data } = await supabase.from('chats').select('*').contains('participants', [currentUser.id]); chats = data || []; }
+async function loadUserGroups() { if(!currentUser) return; const { data } = await supabase.from('groups').select('*').contains('participants', [currentUser.id]); groups = data || []; }
+async function loadUserChannels() { if(!currentUser) return; const { data: all } = await supabase.from('channels').select('*'); channels = (all||[]).filter(c => !c.is_private || c.subscribers?.includes(currentUser.id)); }
+async function loadMessages() { if(!currentUser) return; const ids = [...chats.map(c=>c.id), ...groups.map(g=>g.id), ...channels.map(c=>c.id)]; if(!ids.length) return; const { data } = await supabase.from('messages').select('*').or(`chat_id.in.(${ids.join(',')}),group_id.in.(${ids.join(',')}),channel_id.in.(${ids.join(',')})`); messages = data||[]; }
+async function loadAllData() { await Promise.all([loadProfiles(), loadUserChats(), loadUserGroups(), loadUserChannels(), loadMessages()]); renderApp(); }
+
+async function handleLogin(email, pwd) { const { error } = await supabase.auth.signInWithPassword({ email, password: pwd }); if(error){ showToast(error.message,'error'); return false; } return true; }
+async function handleRegister(email, pwd, name, uname) { const { error } = await supabase.auth.signUp({ email, password: pwd, options: { data: { name, username: uname } } }); if(error){ showToast(error.message,'error'); return false; } showToast('Регистрация успешна! Теперь войдите.','success'); return true; }
+
+async function sendMessage(text) { if(!activeChatId && !activeGroupId && !activeChannelId) return; const msg = { id: crypto.randomUUID(), sender_id: currentUser.id, text, type: 'text', timestamp: new Date().toISOString(), read_by: [currentUser.id], reactions: {} }; if(activeChatId) msg.chat_id = activeChatId; if(activeGroupId) msg.group_id = activeGroupId; if(activeChannelId) msg.channel_id = activeChannelId; const { error } = await supabase.from('messages').insert(msg); if(error) showToast('Ошибка','error'); else { messages.push(msg); renderMessages(); renderChatsList(); } }
+
+async function startChat(userId) { let existing = chats.find(c => c.participants.includes(currentUser.id) && c.participants.includes(userId)); if(!existing) { const { data, error } = await supabase.from('chats').insert({ participants: [currentUser.id, userId], type: 'private' }).select().single(); if(error){ showToast('Ошибка','error'); return; } existing = data; chats.push(existing); } activeChatId = existing.id; activeGroupId = null; activeChannelId = null; renderChatsList(); renderMessages(); document.getElementById('inputArea').style.display = 'flex'; }
+
+function renderAuthScreen() {
+    document.getElementById('app').innerHTML = `
+        <div class="auth-screen">
+            <div class="auth-card">
+                <div class="auth-tabs"><div class="auth-tab active" data-tab="login">Вход</div><div class="auth-tab" data-tab="register">Регистрация</div></div>
+                <input type="email" id="email" class="auth-input" placeholder="Email">
+                <input type="password" id="password" class="auth-input" placeholder="Пароль">
+                <input type="text" id="name" class="auth-input" placeholder="Имя" style="display:none">
+                <input type="text" id="username" class="auth-input" placeholder="Юзернейм" style="display:none">
+                <button class="auth-btn" id="authBtn">Войти</button>
+            </div>
+        </div>
+    `;
+    let isLogin = true;
+    const tabs = document.querySelectorAll('.auth-tab');
+    const nameField = document.getElementById('name');
+    const usernameField = document.getElementById('username');
+    const authBtn = document.getElementById('authBtn');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            isLogin = tab.dataset.tab === 'login';
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            nameField.style.display = isLogin ? 'none' : 'block';
+            usernameField.style.display = isLogin ? 'none' : 'block';
+            authBtn.innerText = isLogin ? 'Войти' : 'Зарегистрироваться';
+        });
+    });
+    authBtn.addEventListener('click', async () => {
+        const email = document.getElementById('email').value.trim();
+        const pwd = document.getElementById('password').value.trim();
+        if(!email || !pwd){ showToast('Заполните поля','error'); return; }
+        if(isLogin) { if(await handleLogin(email,pwd)) location.reload(); }
+        else { const name = document.getElementById('name').value.trim(); const uname = document.getElementById('username').value.trim(); if(!name || !uname){ showToast('Заполните имя и юзернейм','error'); return; } if(await handleRegister(email,pwd,name,uname)){ document.getElementById('email').value=''; document.getElementById('password').value=''; isLogin=true; tabs[0].click(); } }
+    });
+}
+
+function renderMainApp() {
+    return `
+        <div class="main-app">
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <div class="avatar" id="profileBtn">${currentUser?.name?.charAt(0)||'U'}</div>
+                    <button class="icon-btn" id="settingsBtn"><i class="fas fa-cog"></i></button>
+                </div>
+                <div class="tabs">
+                    <div class="tab ${activeTab==='chats'?'active':''}" data-tab="chats">Чаты</div>
+                    <div class="tab ${activeTab==='groups'?'active':''}" data-tab="groups">Группы</div>
+                    <div class="tab ${activeTab==='channels'?'active':''}" data-tab="channels">Каналы</div>
+                    <div class="tab ${activeTab==='friends'?'active':''}" data-tab="friends">Друзья</div>
+                </div>
+                <div class="chats-list" id="chatsList"></div>
+                <button class="fab" id="createFab"><i class="fas fa-plus"></i> Создать</button>
+            </div>
+            <div class="messages-panel">
+                <div class="messages-header">
+                    ${activeChatId||activeGroupId||activeChannelId ? '<span class="back-btn" id="backBtn"><i class="fas fa-arrow-left"></i></span>' : ''}
+                    <div class="chat-name" id="chatTitle" style="font-weight:bold;"></div>
+                </div>
+                <div class="messages-area" id="messagesArea"></div>
+                <div class="input-area" id="inputArea" style="display:none;">
+                    <div class="input-row">
+                        <input type="text" id="msgInput" placeholder="Написать...">
+                        <button class="send-btn" id="sendBtn"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderChatsList() {
+    const container = document.getElementById('chatsList');
+    if(!container) return;
+    if(activeTab === 'friends') {
+        const friends = profiles.filter(p => currentUser.friends?.includes(p.id));
+        container.innerHTML = friends.map(f => `<div class="chat-item" data-userid="${f.id}"><div class="chat-avatar">${f.name.charAt(0)}</div><div class="chat-info"><div class="chat-name">${f.name}</div></div></div>`).join('');
+        document.querySelectorAll('.chat-item[data-userid]').forEach(el => el.addEventListener('click', () => startChat(el.dataset.userid)));
+        return;
+    }
+    let items = [];
+    if(activeTab === 'chats') {
+        items = chats.map(chat => {
+            const other = profiles.find(p => p.id === chat.participants.find(id => id !== currentUser.id));
+            const last = messages.filter(m => m.chat_id === chat.id).sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp))[0];
+            const unread = messages.filter(m => m.chat_id === chat.id && !m.read_by?.includes(currentUser.id) && m.sender_id !== currentUser.id).length;
+            return { id: chat.id, name: other?.name || '?', avatar: other?.avatar, last: last?.text || 'Нет сообщений', unread, type: 'chat' };
+        });
+    } else if(activeTab === 'groups') {
+        items = groups.map(g => {
+            const last = messages.filter(m => m.group_id === g.id).sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp))[0];
+            const unread = messages.filter(m => m.group_id === g.id && !m.read_by?.includes(currentUser.id) && m.sender_id !== currentUser.id).length;
+            return { id: g.id, name: g.name, avatar: '👥', last: last?.text || 'Нет сообщений', unread, type: 'group' };
+        });
+    } else if(activeTab === 'channels') {
+        items = channels.filter(c => c.subscribers?.includes(currentUser.id)).map(c => {
+            const last = messages.filter(m => m.channel_id === c.id).sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp))[0];
+            return { id: c.id, name: c.name, avatar: '📢', last: last?.text || 'Нет постов', unread: 0, type: 'channel' };
+        });
+    }
+    container.innerHTML = items.map(i => `
+        <div class="chat-item ${(activeChatId===i.id||activeGroupId===i.id||activeChannelId===i.id) ? 'active' : ''}" data-id="${i.id}" data-type="${i.type}">
+            <div class="chat-avatar">${i.avatar ? `<img src="${i.avatar}">` : i.name.charAt(0)}</div>
+            <div class="chat-info"><div class="chat-name">${i.name}</div><div class="chat-lastmsg">${(i.last||'').substring(0,40)}</div></div>
+            ${i.unread>0 ? `<span class="unread">${i.unread}</span>` : ''}
+        </div>
+    `).join('');
+    document.querySelectorAll('.chat-item[data-id]').forEach(el => {
+        el.addEventListener('click', () => {
+            const id = el.dataset.id, type = el.dataset.type;
+            activeChatId = type==='chat' ? id : null;
+            activeGroupId = type==='group' ? id : null;
+            activeChannelId = type==='channel' ? id : null;
+            renderChatsList();
+            renderMessages();
+            document.getElementById('inputArea').style.display = 'flex';
+        });
+    });
+}
+
+function renderMessages() {
+    const area = document.getElementById('messagesArea');
+    const titleEl = document.getElementById('chatTitle');
+    if(!area) return;
+    let msgs = [], title = '';
+    if(activeChatId) {
+        msgs = messages.filter(m => m.chat_id === activeChatId).sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
+        const other = profiles.find(p => p.id === chats.find(c=>c.id===activeChatId)?.participants.find(id=>id!==currentUser.id));
+        title = other?.name || 'Чат';
+    } else if(activeGroupId) {
+        msgs = messages.filter(m => m.group_id === activeGroupId).sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
+        title = groups.find(g=>g.id===activeGroupId)?.name || 'Группа';
+    } else if(activeChannelId) {
+        msgs = messages.filter(m => m.channel_id === activeChannelId).sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
+        title = channels.find(c=>c.id===activeChannelId)?.name || 'Канал';
+    } else { area.innerHTML = ''; titleEl.innerText = ''; return; }
+    titleEl.innerText = title;
+    area.innerHTML = msgs.map(m => {
+        const sender = profiles.find(p => p.id === m.sender_id);
+        const isOwn = m.sender_id === currentUser.id;
+        return `<div class="message ${isOwn ? 'own' : ''}"><div class="bubble">${escapeHtml(m.text||'')}</div><div class="meta">${sender?.name||'?'} • ${formatTime(m.timestamp)}</div><div class="reactions">${Object.entries(m.reactions||{}).map(([e,u])=>`<span class="reaction" data-msg="${m.id}" data-emoji="${e}">${e} ${u.length}</span>`).join('')}</div></div>`;
+    }).join('');
+    area.scrollTop = area.scrollHeight;
+    msgs.forEach(async m => {
+        if(!m.read_by?.includes(currentUser.id) && m.sender_id !== currentUser.id) {
+            const newRead = [...(m.read_by||[]), currentUser.id];
+            await supabase.from('messages').update({ read_by: newRead }).eq('id', m.id);
+            m.read_by = newRead;
+        }
+    });
+}
+
+function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m])); }
+
+function subscribeRealtime() {
+    if(subscriptions.length) subscriptions.forEach(s=>s.unsubscribe());
+    const ch = supabase.channel('nova');
+    ch.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, p => {
+        messages.push(p.new);
+        if((activeChatId && p.new.chat_id===activeChatId) || (activeGroupId && p.new.group_id===activeGroupId) || (activeChannelId && p.new.channel_id===activeChannelId)) renderMessages();
+        renderChatsList();
+    }).subscribe();
+    subscriptions.push(ch);
+}
+
+async function init() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if(session) {
+        const { data: user } = await supabase.auth.getUser();
+        const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.user.id).single();
+        currentUser = { ...user.user, ...prof };
+        await loadAllData();
+        document.getElementById('app').innerHTML = renderMainApp();
+        renderChatsList();
+        renderMessages();
+        subscribeRealtime();
+        document.getElementById('profileBtn')?.addEventListener('click', () => showToast('Профиль в разработке','info'));
+        document.getElementById('settingsBtn')?.addEventListener('click', () => showToast('Настройки скоро','info'));
+        document.getElementById('createFab')?.addEventListener('click', () => {
+            if(activeTab==='groups') {
+                const name = prompt('Название группы');
+                if(name) supabase.from('groups').insert({ name, creator_id: currentUser.id, participants: [currentUser.id], slow_mode:0 }).select().single().then(res=>{ if(!res.error){ groups.push(res.data); renderChatsList(); showToast('Группа создана','success'); } });
+            } else if(activeTab==='channels') {
+                const name = prompt('Название канала');
+                const uname = prompt('Юзернейм (латиница)');
+                if(name && uname) supabase.from('channels').insert({ name, username: uname, creator_id: currentUser.id, admins: [currentUser.id], is_private: false, subscribers: [currentUser.id], invite_link: 'inv_'+Math.random().toString(36) }).select().single().then(res=>{ if(!res.error){ channels.push(res.data); renderChatsList(); showToast('Канал создан','success'); } });
+            } else showToast('Чтобы создать чат, нажмите на друга во вкладке "Друзья"','info');
+        });
+        document.getElementById('backBtn')?.addEventListener('click', () => { activeChatId=null; activeGroupId=null; activeChannelId=null; renderMessages(); document.getElementById('inputArea').style.display='none'; });
+        document.getElementById('sendBtn')?.addEventListener('click', async () => { const inp=document.getElementById('msgInput'); if(inp.value.trim()){ await sendMessage(inp.value); inp.value=''; } });
+        document.querySelectorAll('.tab').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                activeTab = e.target.dataset.tab;
+                activeChatId=null; activeGroupId=null; activeChannelId=null;
+                renderChatsList();
+                renderMessages();
+                document.getElementById('inputArea').style.display='none';
+                document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+                e.target.classList.add('active');
+            });
+        });
+    } else renderAuthScreen();
+}
+init();
+// ========== ПРОДОЛЖЕНИЕ: РАСШИРЕННЫЙ ФУНКЦИОНАЛ ==========
+
+// 1. УПРАВЛЕНИЕ ДРУЗЬЯМИ (заявки, принятие, отклонение)
+async function sendFriendRequest(toUserId) {
+    const exists = friendRequests.some(r => r.from_user_id === currentUser.id && r.to_user_id === toUserId && r.status === 'pending');
+    if (exists) { showToast('Заявка уже отправлена', 'error'); return; }
+    const { error } = await supabase.from('friend_requests').insert({ from_user_id: currentUser.id, to_user_id: toUserId, status: 'pending', created_at: new Date().toISOString() });
+    if (error) showToast('Ошибка отправки', 'error');
+    else { showToast('Заявка отправлена', 'success'); await loadFriendRequests(); renderChatsList(); }
+}
+async function loadFriendRequests() {
+    if (!currentUser) return;
+    const { data } = await supabase.from('friend_requests').select('*').or(`from_user_id.eq.${currentUser.id},to_user_id.eq.${currentUser.id}`);
+    friendRequests = data || [];
+}
+async function acceptFriendRequest(fromUserId) {
+    const { error } = await supabase.from('friend_requests').update({ status: 'accepted' }).eq('from_user_id', fromUserId).eq('to_user_id', currentUser.id);
+    if (error) { showToast('Ошибка', 'error'); return; }
+    // Обновить список друзей у обоих пользователей
+    const newFriendsCurrent = [...new Set([...(currentUser.friends || []), fromUserId])];
+    const { data: otherProfile } = await supabase.from('profiles').select('friends').eq('id', fromUserId).single();
+    const newFriendsOther = [...new Set([...(otherProfile?.friends || []), currentUser.id])];
+    await supabase.from('profiles').update({ friends: newFriendsCurrent }).eq('id', currentUser.id);
+    await supabase.from('profiles').update({ friends: newFriendsOther }).eq('id', fromUserId);
+    currentUser.friends = newFriendsCurrent;
+    showToast('Друг добавлен', 'success');
+    await loadAllData();
+    renderChatsList();
+}
+async function rejectFriendRequest(fromUserId) {
+    await supabase.from('friend_requests').delete().eq('from_user_id', fromUserId).eq('to_user_id', currentUser.id);
+    showToast('Заявка отклонена', 'info');
+    await loadFriendRequests();
+    renderChatsList();
+}
+
+// 2. РЕАКЦИИ НА СООБЩЕНИЯ (добавление/удаление)
+async function addReaction(msgId, emoji) {
+    const msg = messages.find(m => m.id === msgId);
+    if (!msg) return;
+    let reactions = msg.reactions || {};
+    if (!reactions[emoji]) reactions[emoji] = [];
+    const idx = reactions[emoji].indexOf(currentUser.id);
+    if (idx === -1) reactions[emoji].push(currentUser.id);
+    else reactions[emoji].splice(idx, 1);
+    if (reactions[emoji].length === 0) delete reactions[emoji];
+    const { error } = await supabase.from('messages').update({ reactions }).eq('id', msgId);
+    if (!error) { msg.reactions = reactions; renderMessages(); }
+}
+
+// 3. СТИКЕРЫ (сохранение, отображение, отправка)
+let userStickers = [];
+async function loadUserStickers() {
+    if (!currentUser) return;
+    const { data } = await supabase.from('user_stickers').select('*').eq('user_id', currentUser.id);
+    userStickers = data || [];
+}
+async function saveSticker(dataUrl) {
+    const { error } = await supabase.from('user_stickers').insert({ user_id: currentUser.id, pack_id: 'default', data_url: dataUrl });
+    if (error) showToast('Ошибка сохранения', 'error');
+    else { showToast('Стикер сохранён', 'success'); await loadUserStickers(); renderStickerPicker(); }
+}
+function renderStickerPicker() {
+    const container = document.getElementById('stickerPicker');
+    if (!container) return;
+    if (userStickers.length === 0) { container.innerHTML = '<p>Нет стикеров. Нажмите "Управлять", чтобы добавить.</p>'; return; }
+    container.innerHTML = userStickers.map(s => `<img src="${s.data_url}" class="sticker-item" data-url="${s.data_url}" style="width:60px; height:60px; margin:5px; cursor:pointer;">`).join('');
+    document.querySelectorAll('.sticker-item').forEach(img => {
+        img.addEventListener('click', () => sendSticker(img.dataset.url));
+    });
+}
+async function sendSticker(dataUrl) {
+    if (!activeChatId && !activeGroupId && !activeChannelId) { showToast('Выберите чат', 'error'); return; }
+    const msg = {
+        id: crypto.randomUUID(),
+        sender_id: currentUser.id,
+        text: dataUrl,
+        type: 'sticker',
+        timestamp: new Date().toISOString(),
+        read_by: [currentUser.id],
+        reactions: {}
+    };
+    if (activeChatId) msg.chat_id = activeChatId;
+    if (activeGroupId) msg.group_id = activeGroupId;
+    if (activeChannelId) msg.channel_id = activeChannelId;
+    const { error } = await supabase.from('messages').insert(msg);
+    if (error) showToast('Ошибка', 'error');
+    else { messages.push(msg); renderMessages(); renderChatsList(); }
+}
+
+// 4. ИСТОРИИ (stories)
+async function addStory(content, type = 'text', text = '') {
+    const { error } = await supabase.from('stories').insert({
+        user_id: currentUser.id,
+        type: type,
+        content: content,
+        text: text,
+        timestamp: new Date().toISOString(),
+        viewed_by: [currentUser.id]
+    });
+    if (error) showToast('Ошибка', 'error');
+    else { showToast('История опубликована', 'success'); await loadStories(); renderStories(); }
+}
+async function loadStories() {
+    if (!currentUser) return;
+    const friendIds = currentUser.friends || [];
+    const channelSubIds = channels.flatMap(c => c.subscribers || []).filter(id => id !== currentUser.id);
+    const userIds = [...new Set([...friendIds, ...channelSubIds])];
+    if (userIds.length === 0) { stories = []; return; }
+    const { data } = await supabase.from('stories').select('*').in('user_id', userIds);
+    stories = data || [];
+}
+function renderStories() {
+    const container = document.getElementById('storiesContainer');
+    if (!container) return;
+    const myStories = stories.filter(s => s.user_id === currentUser.id);
+    const friendsStories = stories.filter(s => s.user_id !== currentUser.id);
+    let html = `<div class="story-circle" id="addStoryBtn"><i class="fas fa-plus"></i><span style="font-size:12px;">Моя</span></div>`;
+    friendsStories.forEach(s => {
+        const user = profiles.find(p => p.id === s.user_id);
+        const viewed = s.viewed_by.includes(currentUser.id);
+        html += `<div class="story-circle ${viewed ? 'viewed' : ''}" data-story-id="${s.id}" data-user="${s.user_id}" style="background-image: url(${user?.avatar || ''});">${user?.name?.charAt(0)}</div>`;
+    });
+    container.innerHTML = html;
+    document.getElementById('addStoryBtn')?.addEventListener('click', () => showAddStoryModal());
+    document.querySelectorAll('.story-circle[data-story-id]').forEach(el => {
+        el.addEventListener('click', () => {
+            const userId = el.dataset.user;
+            const userStories = stories.filter(s => s.user_id === userId).sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
+            if (userStories.length) showStoryViewer(userStories, 0);
+        });
+    });
+}
+function showAddStoryModal() {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay active';
+    modal.innerHTML = `
+        <div class="modal-card">
+            <h2>Новая история</h2>
+            <textarea id="storyText" placeholder="Текст истории" rows="3"></textarea>
+            <label class="custom-file-upload"><i class="fas fa-image"></i> Загрузить фото</label>
+            <input type="file" id="storyImage" accept="image/*" style="display:none">
+            <div class="modal-actions"><button class="primary" id="publishStory">Опубликовать</button><button class="secondary" id="closeStoryModal">Отмена</button></div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    const fileInput = modal.querySelector('#storyImage');
+    const uploadLabel = modal.querySelector('.custom-file-upload');
+    uploadLabel.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = async (ev) => {
+                await addStory(ev.target.result, 'image', modal.querySelector('#storyText').value);
+                modal.remove();
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+    modal.querySelector('#publishStory').addEventListener('click', async () => {
+        const text = modal.querySelector('#storyText').value.trim();
+        if (text) await addStory(text, 'text', text);
+        modal.remove();
+    });
+    modal.querySelector('#closeStoryModal').addEventListener('click', () => modal.remove());
+}
+function showStoryViewer(storyList, index) {
+    // упрощённая версия просмотра историй
+    if (index >= storyList.length) return;
+    const story = storyList[index];
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay active';
+    modal.innerHTML = `
+        <div class="modal-card" style="text-align:center;">
+            <div class="story-progress"><div class="story-progress-bar" style="width:100%; height:4px; background:#ff8c42;"></div></div>
+            <div class="story-content">${story.type === 'image' ? `<img src="${story.content}" style="max-width:100%; max-height:300px;">` : `<p>${story.text || story.content}</p>`}</div>
+            <div class="modal-actions"><button class="secondary" id="closeStoryViewer">Закрыть</button></div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    // Отметить как просмотренное
+    if (!story.viewed_by.includes(currentUser.id)) {
+        story.viewed_by.push(currentUser.id);
+        supabase.from('stories').update({ viewed_by: story.viewed_by }).eq('id', story.id);
+    }
+    const progressBar = modal.querySelector('.story-progress-bar');
+    let width = 100;
+    const interval = setInterval(() => {
+        width -= 2;
+        progressBar.style.width = width + '%';
+        if (width <= 0) {
+            clearInterval(interval);
+            modal.remove();
+            if (index + 1 < storyList.length) showStoryViewer(storyList, index + 1);
+        }
+    }, 100);
+    modal.querySelector('#closeStoryViewer').addEventListener('click', () => { clearInterval(interval); modal.remove(); });
+}
+
+// 5. КАНАЛЫ: закреп сообщений и комментарии
+async function pinMessage(channelId, messageId) {
+    const { error } = await supabase.from('channels').update({ pinned_message_id: messageId }).eq('id', channelId);
+    if (!error) showToast('Сообщение закреплено', 'success');
+}
+async function openComments(channelId) {
+    const channel = channels.find(c => c.id === channelId);
+    if (!channel) return;
+    let commentsChat = chats.find(c => c.type === 'comments' && c.channelId === channelId);
+    if (!commentsChat) {
+        const { data, error } = await supabase.from('chats').insert({ participants: [currentUser.id], type: 'comments', channelId: channelId }).select().single();
+        if (error) { showToast('Ошибка', 'error'); return; }
+        commentsChat = data;
+        chats.push(commentsChat);
+    }
+    activeChatId = commentsChat.id;
+    activeGroupId = null;
+    activeChannelId = null;
+    renderChatsList();
+    renderMessages();
+    document.getElementById('inputArea').style.display = 'flex';
+}
+
+// 6. КАСТОМНЫЕ ТЕМЫ ОФОРМЛЕНИЯ
+function applyTheme(themeName, custom = null) {
+    document.body.className = '';
+    if (themeName === 'dark') document.body.classList.add('dark');
+    else if (themeName === 'blue') document.body.classList.add('blue');
+    else if (themeName === 'light') document.body.classList.remove('dark', 'blue');
+    else if (themeName === 'custom' && custom) {
+        document.documentElement.style.setProperty('--bg', custom.bg);
+        document.documentElement.style.setProperty('--text', custom.text);
+        document.documentElement.style.setProperty('--accent', custom.accent);
+        document.documentElement.style.setProperty('--sidebar', custom.sidebar);
+        document.documentElement.style.setProperty('--own', custom.own);
+        document.documentElement.style.setProperty('--other', custom.other);
+    }
+    localStorage.setItem('nova_theme', themeName);
+    if (custom) localStorage.setItem('nova_custom_theme', JSON.stringify(custom));
+}
+
+// 7. ДОБАВЛЯЕМ ОБРАБОТЧИКИ ДЛЯ НОВЫХ ЭЛЕМЕНТОВ ИНТЕРФЕЙСА (вызывать после рендера)
+function attachExtendedHandlers() {
+    // Кнопка добавления стикера (если есть в интерфейсе)
+    const stickerBtn = document.getElementById('stickerBtn');
+    if (stickerBtn) {
+        stickerBtn.addEventListener('click', () => {
+            const picker = document.getElementById('stickerPicker');
+            if (picker) picker.classList.toggle('hidden');
+            renderStickerPicker();
+        });
+    }
+    // Обработчик для реакций (делегирование)
+    document.getElementById('messagesArea')?.addEventListener('click', (e) => {
+        const reactionSpan = e.target.closest('.reaction');
+        if (reactionSpan && reactionSpan.dataset.msg && reactionSpan.dataset.emoji) {
+            addReaction(reactionSpan.dataset.msg, reactionSpan.dataset.emoji);
+        }
+    });
+}
+
+// Переопределяем init, чтобы добавить загрузку дополнительных данных и отображение историй
+const superInit = init;
+window.init = async function() {
+    await superInit();
+    if (currentUser) {
+        await loadUserStickers();
+        await loadFriendRequests();
+        await loadStories();
+        renderStories();
+        attachExtendedHandlers();
+        // Добавляем контейнер для историй в сайдбар (если отсутствует)
+        if (!document.getElementById('storiesContainer')) {
+            const sidebar = document.querySelector('.sidebar');
+            const header = document.querySelector('.sidebar-header');
+            const storiesDiv = document.createElement('div');
+            storiesDiv.id = 'storiesContainer';
+            storiesDiv.className = 'stories-container';
+            header?.insertAdjacentElement('afterend', storiesDiv);
+        }
+        // Добавляем контейнер для стикеров в input-area
+        if (!document.getElementById('stickerPicker')) {
+            const inputArea = document.getElementById('inputArea');
+            if (inputArea) {
+                const pickerDiv = document.createElement('div');
+                pickerDiv.id = 'stickerPicker';
+                pickerDiv.className = 'sticker-picker hidden';
+                pickerDiv.style.padding = '10px';
+                pickerDiv.style.background = 'white';
+                pickerDiv.style.borderRadius = '20px';
+                pickerDiv.style.marginTop = '10px';
+                inputArea.appendChild(pickerDiv);
+                const stickerBtnHtml = `<button class="icon-btn" id="stickerBtn" style="margin-left:8px;"><i class="fas fa-sticky-note"></i></button>`;
+                document.querySelector('.input-row')?.insertAdjacentHTML('beforeend', stickerBtnHtml);
+            }
+        }
+    }
+};
+// Перезапускаем
+if (window.init) window.init();
+</script>
+</body>
+</html>
