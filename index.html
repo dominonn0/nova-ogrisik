@@ -1,4 +1,4 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -34,48 +34,6 @@
         body.custom-theme { background: var(--bg-color); color: var(--text-color); }
         #app { height: 100%; width: 100%; }
         
-        /* SPLASH SCREEN */
-        .splash-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #fde9db 0%, #f8d5bb 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-            flex-direction: column;
-            transition: opacity 0.8s ease;
-        }
-        .splash-screen.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-        .splash-logo {
-            font-size: 72px;
-            font-weight: 800;
-            background: linear-gradient(45deg, #ff8c42, #ff5722);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            margin-bottom: 30px;
-            animation: pulseLogo 1.2s infinite alternate;
-        }
-        @keyframes pulseLogo {
-            0% { transform: scale(1); text-shadow: 0 0 0px rgba(255,140,66,0); }
-            100% { transform: scale(1.05); text-shadow: 0 0 20px rgba(255,140,66,0.5); }
-        }
-        .splash-spinner { width: 60px; height: 60px; border: 5px solid rgba(255,140,66,0.2); border-top-color: #ff8c42; border-right-color: #ffaa66; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 20px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .splash-text { font-size: 18px; font-weight: 500; color: #b37b4c; animation: fadeText 1.5s infinite; }
-        .splash-dots { display: flex; gap: 8px; margin-top: 20px; }
-        .splash-dots span { width: 8px; height: 8px; background: #ff8c42; border-radius: 50%; animation: bounceDot 0.8s infinite alternate; }
-        .splash-dots span:nth-child(2) { animation-delay: 0.2s; }
-        .splash-dots span:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes bounceDot { 0% { transform: translateY(0); opacity: 0.4; } 100% { transform: translateY(-8px); opacity: 1; } }
-
         /* Стили для совместного холста */
         .canvas-room {
             display: flex;
@@ -257,17 +215,11 @@
 <body>
 <div id="app"></div>
 <div class="toast-container" id="toast-container"></div>
-<div class="splash-screen" id="splashScreen">
-    <div class="splash-logo">✨ Nova Social</div>
-    <div class="splash-spinner"></div>
-    <div class="splash-text">Подключение к Supabase...</div>
-    <div class="splash-dots"><span></span><span></span><span></span></div>
-</div>
 
 <script>
 // ======================== ВАШИ ДАННЫЕ SUPABASE ========================
-const SUPABASE_URL = 'https://ejpxgtwnovcrjybtssyv.supabase.co';     // ЗАМЕНИТЕ
-const SUPABASE_ANON_KEY = 'sb_publishable_C-cbwbUsyu4tdKyG97Ctxw_y5TSX9gR';                // ЗАМЕНИТЕ
+const SUPABASE_URL = 'https://ejpxgtwnovcrjybtssyv.supabase.co';     // БЕЗ /rest/v1/
+const SUPABASE_ANON_KEY = 'sb_publishable_C-cbwbUsyu4tdKyG97Ctxw_y5TSX9gR';
 // ==========================================================================
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -414,7 +366,6 @@ function setupRealtimeSubscriptions() {
             const { eventType, new: newMsg, old: oldMsg } = payload;
             if(eventType === 'INSERT') {
                 messages.push(newMsg);
-                // Автоматически отметить как прочитанное, если сообщение в активном чате
                 if((newMsg.chat_id === activeChatId) || (newMsg.group_id === activeGroupId) || (newMsg.channel_id === activeChannelId)) {
                     await markMessagesAsRead(activeChatId, activeGroupId, activeChannelId);
                     renderMessages();
@@ -476,7 +427,6 @@ async function loginWithEmail(email, password) {
 }
 async function logout() {
     await supabase.auth.signOut();
-    // Отписываемся от всех каналов
     if(messagesSubscription) messagesSubscription.unsubscribe();
     if(canvasSubscription) canvasSubscription.unsubscribe();
     if(groupsSubscription) groupsSubscription.unsubscribe();
@@ -513,11 +463,9 @@ async function sendMessage() {
             mentions = parseMentions(text, parts);
         }
     }
-    // Отправка изображений (уже загружены в Storage? pendingImages хранят dataUrl - нужно переделать)
-    // Для изображений: сначала загружаем в Storage, получаем URL, потом отправляем
     if(pendingImages.length>0){
         for(let img of pendingImages){
-            let file = img.file; // теперь храним File объект
+            let file = img.file;
             let publicUrl = '';
             try {
                 publicUrl = await uploadFile(file, 'chat-images', 'images');
@@ -663,7 +611,6 @@ async function addStickerFromFile(file) {
     } catch(e) { showToast('Ошибка загрузки стикера',3000,'error'); }
 }
 async function addDrawingSticker(dataUrl) {
-    // dataUrl нужно загрузить в Storage
     const blob = await (await fetch(dataUrl)).blob();
     const file = new File([blob], 'sticker.png', { type: 'image/png' });
     await addStickerFromFile(file);
@@ -1543,10 +1490,6 @@ function renderApp() {
 const savedTheme = localStorage.getItem('nova_theme') || 'light';
 const savedCustom = JSON.parse(localStorage.getItem('nova_customTheme') || 'null');
 setTheme(savedTheme, savedCustom);
-setTimeout(() => {
-    const splash = document.getElementById('splashScreen');
-    if(splash) splash.classList.add('hidden');
-}, 1500);
 initSupabase();
 </script>
 </body>
